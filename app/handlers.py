@@ -12,21 +12,9 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    await message.answer(text=await adaptive_text.hello_text(message.from_user.username), parse_mode='HTML',
-                         reply_markup=await markups.get_user_main_keyboard_markup(),
+    await message.answer(text=await adaptive_text.hello_text(message.from_user.username), parse_mode='HTML'
                          )
     await state.set_state(NextStep.password)
-
-
-@router.message(NextStep.password)
-async def password_check(message: Message, state: FSMContext):
-    print(f'message:{message.text}')
-
-    server_user_item = await server_db.check_password(message.text)
-    print(server_user_item)
-    await state.clear()
-
-
 
 
 @router.message(Command('help'))
@@ -38,6 +26,16 @@ async def cmd_start(message: types.Message):
 async def cmd_start(message: types.Message):
     await message.answer(text=message.text, parse_mode='HTML')
 
+
+
+@router.message(NextStep.password)
+async def password_check(message: Message, state: FSMContext):
+    try:
+        server_user_item = await server_db.check_password(message.text)
+        await message.answer(text = text_samples.password_success, parse_mode='HTML')
+        await state.clear()
+    except:
+        await message.reply(text = text_samples.password_error, parse_mode='HTML')
 
 @router.message(F.text)
 async def reply_mes(message: types.Message):

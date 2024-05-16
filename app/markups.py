@@ -1,9 +1,11 @@
-from aiogram.types import InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton, KeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 
 async def get_user_main_keyboard_markup():
-    builder = InlineKeyboardBuilder()
-    button_hi = InlineKeyboardButton(text='Привет', callback_data='user_hi')
-    builder.add(button_hi)
+    builder = ReplyKeyboardBuilder()
+    button_profile = KeyboardButton(text='👤 Профиль')
+    button_fincial_report = InlineKeyboardButton(text = )
+    builder.row(button_profile)
     return builder.as_markup()
+
