@@ -26,14 +26,16 @@ async def get_user_to_db(user_id: int):
         await conn.close()
 
 
-async def check_password(password: int):
+async def check_password(password):
     db_server_pool = await create_pool()
-    async with db_server_pool.acquier() as conn:
-        query_get = f'SELECT * FROM telegram_users' \
-                    f'WHERE password = {password};'
+    async with db_server_pool.acquire() as conn:
+        print(password)
+        query_all = f'select * from telegram_users'
+        print(await conn.fetch(query_all))
+        query_get = (f"SELECT * FROM telegram_users "
+                     f"WHERE password = '{password}'")
         result = await conn.fetch(query_get)
-        conn.close()
-        return result
+        await conn.close()
+        return result[-1]
 
-if __name__ == "__main__":
-    asyncio.run(get_user_to_db(734434528))
+

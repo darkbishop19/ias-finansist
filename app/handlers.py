@@ -21,12 +21,11 @@ async def cmd_start(message: Message, state: FSMContext):
 @router.message(NextStep.password)
 async def password_check(message: Message, state: FSMContext):
     print(f'message:{message.text}')
-    try:
-        server_user_item = await server_db.check_password(int(message.text))
-        print(server_user_item)
-        await state.clear()
-    except:
-        await message.reply(text = text_samples.password_error)
+
+    server_user_item = await server_db.check_password(message.text)
+    print(server_user_item)
+    await state.clear()
+
 
 
 
