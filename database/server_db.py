@@ -26,16 +26,14 @@ async def get_user_to_db(user_id: int):
         await conn.close()
 
 
-async def check_password(telegram_object: Message, password: int):
+async def check_password(password: int):
     db_server_pool = await create_pool()
     async with db_server_pool.acquier() as conn:
         query_get = f'SELECT * FROM telegram_users' \
                     f'WHERE password = {password};'
         result = await conn.fetch(query_get)
-        if result[-1]["telegram_id"] == None:
-            query_input = f'UPDATE telegram_users set telegram_id = {telegram_object.lang}'
-            await conn.execute()
-
+        conn.close()
+        return result
 
 if __name__ == "__main__":
     asyncio.run(get_user_to_db(734434528))

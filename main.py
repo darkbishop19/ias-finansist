@@ -20,6 +20,7 @@ dp.include_routers(admin_router,
 
 logging.basicConfig(level=logging.INFO)
 
+
 async def handler(event, context):
     body = json.loads(event['body'])
     update = types.Update.parse_obj(body)
@@ -27,8 +28,6 @@ async def handler(event, context):
 
 
 async def main():
-    # db_bank_pool = await asyncpg.create_pool(BANK_DATABASE_URL)
-    # db_server_pool = await asyncpg.create_pool(SERVER_DATABASE_URL)
     await dp.start_polling(bot)
 
 
