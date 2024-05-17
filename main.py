@@ -9,14 +9,14 @@ from dotenv import load_dotenv
 import os
 import asyncio
 import asyncpg
-
+from app.middlewares import BotObjectMiddleware
 load_dotenv()
 bot = Bot(token=os.getenv('BOT_TOKEN'))
 dp = Dispatcher()
-# BANK_DATABASE_URL = os.getenv('BANK_DATABASE_URL')
-# SERVER_DATABASE_URL = os.getenv('SERVER_DATABASE_URL')
 dp.include_routers(admin_router,
                    router)
+
+dp.update.middleware(BotObjectMiddleware(bot_object=bot))
 
 logging.basicConfig(level=logging.INFO)
 

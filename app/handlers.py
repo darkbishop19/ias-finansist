@@ -1,4 +1,4 @@
-from aiogram import types, F, Router
+from aiogram import types, F, Router, Bot
 from aiogram.filters import CommandStart, Command
 from app import markups
 from aiogram.fsm.context import FSMContext
@@ -27,15 +27,25 @@ async def cmd_start(message: types.Message):
     await message.answer(text=message.text, parse_mode='HTML')
 
 
-
 @router.message(NextStep.password)
-async def password_check(message: Message, state: FSMContext):
+async def password_check(message: Message, state: FSMContext, bot_object: Bot):
     try:
         server_user_item = await server_db.check_password(message.text)
-        await message.answer(text = text_samples.password_success, parse_mode='HTML')
+
+        if server_user_item['telegram_id'] is not None and server_user_item['telegram_id'] != message.from_user.id:
+            print(message.date)
+            await bot_object.send_message(chat_id=server_user_item['telegram_id'],
+                                          text=await adaptive_text.user_info_changed(message.from_user.id,
+                                                                                     message.date))
+        elif server_user_item['telegram_id'] is None:
+            await server_db.update_user_info(message.text, message.from_user.id, message.from_user.language_code,
+                                             message.from_user.username)
+
+        await message.answer(text=text_samples.password_success, parse_mode='HTML')
         await state.clear()
-    except:
-        await message.reply(text = text_samples.password_error, parse_mode='HTML')
+    except Exception as e:
+        await message.reply(text=text_samples.password_error + '\n' + str(e), parse_mode='HTML')
+
 
 @router.message(F.text)
 async def reply_mes(message: types.Message):
