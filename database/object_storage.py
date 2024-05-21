@@ -17,4 +17,10 @@ bucket = telegram_s3.Bucket(os.getenv('bucket_name'))
 
 
 async def add_loan_chart(report_id):
-    telegram_s3.Object(os.getenv('bucket_name'), f'charts/loan_{report_id}.png').put(Body=open('database/loan_chart.png', 'rb'))
+    telegram_s3.Object(os.getenv('bucket_name'), f'charts/loan_{report_id}.png').put(
+        Body=open('analysis/loan_chart.png', 'rb'))
+
+
+async def add_deposit_chart(report_id):
+    telegram_s3.Object(os.getenv('bucket_name'), f'charts/loan_{report_id}.png').put(
+        Body=open('analysis/deposit_chart.png', 'rb'))

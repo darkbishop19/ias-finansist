@@ -52,8 +52,8 @@ async def check_options_for_loan_products(future_loan_invoice):
         options_for_loans += privileges + '\n\n'
     necessary_sum_to_pay = total_needed_sum_to_pay - not_needed_sum_to_pay
     options_to_pay = f'Общая сумма к оплате в этом месяце: {total_needed_sum_to_pay}\n' \
-                         f'Обязательная сумма к оплате в этом месяце: {necessary_sum_to_pay}\n' \
-                         f'Необязательная сумма к оплате в этом месяце: {not_needed_sum_to_pay}'
+                     f'Обязательная сумма к оплате в этом месяце: {necessary_sum_to_pay}\n' \
+                     f'Необязательная сумма к оплате в этом месяце: {not_needed_sum_to_pay}'
     options_for_loans += '\n' + options_to_pay
     return options_for_loans
 
@@ -86,6 +86,6 @@ async def create_account_loans_charts(loan_invoices, report_id):
     plt.title('Платежи по кредитам', fontsize=16)
     plt.xticks(dates)
     plt.legend()
-    plt.savefig('database/loan_chart.png')
+    plt.savefig('analysis/loan_chart.png')
     plt.close()
     await object_storage.add_loan_chart(report_id)
