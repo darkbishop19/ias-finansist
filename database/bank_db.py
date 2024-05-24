@@ -102,6 +102,8 @@ async def get_deposit_item(deposit_id):
         await conn.close()
         db_server_pool.terminate()
         return result[-1]
+
+
 async def get_deposit_product_item(deposit_product_id):
     db_server_pool = await create_pool()
     async with db_server_pool.acquire() as conn:
@@ -112,6 +114,7 @@ async def get_deposit_product_item(deposit_product_id):
         db_server_pool.terminate()
         return result[-1]
 
+
 async def get_deposit_type_item(deposit_type_id):
     db_server_pool = await create_pool()
     async with db_server_pool.acquire() as conn:
@@ -121,3 +124,33 @@ async def get_deposit_type_item(deposit_type_id):
         await conn.close()
         db_server_pool.terminate()
         return result[-1]
+
+
+async def get_account_item(account_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f"SELECT * FROM accounts "
+                     f"WHERE account_id = {account_id}")
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result[-1]
+
+async def get_account_deposit_items(account_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f"SELECT * FROM deposits "
+                     f"WHERE account_id = {account_id}")
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result
+
+async def get_all_bank_deposit_products():
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f"SELECT * FROM deposit_products")
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result

@@ -3,6 +3,7 @@ import os
 
 import boto3
 from dotenv import load_dotenv
+from matplotlib import image as mpimg
 
 load_dotenv()
 telegram_s3 = boto3.resource(
@@ -22,5 +23,25 @@ async def add_loan_chart(report_id):
 
 
 async def add_deposit_chart(report_id):
-    telegram_s3.Object(os.getenv('bucket_name'), f'charts/loan_{report_id}.png').put(
+    telegram_s3.Object(os.getenv('bucket_name'), f'charts/deposit_{report_id}.png').put(
         Body=open('analysis/deposit_chart.png', 'rb'))
+
+
+async def get_loan_chart(report_id):
+    object = bucket.Object(f'charts/loan_{report_id}.png')
+
+    img_data = object.get().get('Body').read()
+
+    return img_data
+
+
+async def get_deposit_chart(report_id):
+    object = bucket.Object(f'charts/deposit_{report_id}.png')
+
+    img_data = object.get().get('Body').read()
+
+    return img_data
+
+
+async def add_report(report_id):
+    bucket.upload_file("analysis/report.pdf", f"reports/report_{report_id}.pdf")

@@ -13,9 +13,9 @@ async def get_account_loan_dataset(account_id, report_id):
         loan_invoices.append(await bank_db.get_account_loan_payments(loan['loan_id']))
     future_invoices = await get_future_loan_invoices(loan_invoices)
 
-    options_text = await check_options_for_loan_products(future_invoices)
+    loans_list = await check_options_for_loan_products(future_invoices)
     await create_account_loans_charts(loan_invoices, report_id)
-    return options_text
+    return loans_list
 
 
 async def get_future_loan_invoices(loan_invoices):
@@ -25,37 +25,48 @@ async def get_future_loan_invoices(loan_invoices):
 
 
 async def check_options_for_loan_products(future_loan_invoice):
-    options_for_loans = 'Количество ваших будущих платежей по кредитной продукции:\n\n'
+    loans_description = ['Количество ваших будущих платежей по кредитной продукции:']
+    loans_advice = []
     total_needed_sum_to_pay = 0
     not_needed_sum_to_pay = 0
+
     for future_invoice in future_loan_invoice:
         total_needed_sum_to_pay += future_invoice['payment']
         loan = await bank_db.get_loan_item(future_invoice['loan_id'])
         loan_product = await bank_db.get_loan_product(loan['loan_product_id'])
         loan_type = await bank_db.get_loan_type(loan_product['loan_type_id'])
 
-        options_for_loans += f'ID платежа: {future_invoice["loan_invoice_id"]}\n' \
-                             f'Название продукта: {loan_product["name"]}\n' \
-                             f'Дата: {future_invoice["date"]}\n' \
-                             f'Платеж: {future_invoice["payment"]}\n' \
-                             f'Сумма покрытия тела долга: {future_invoice["body_amount"]}\n' \
-                             f'Сумма покрытия начисленного долга: {future_invoice["payment"] - future_invoice["body_amount"]}\n'
+        loan_description = (f'ID платежа: {future_invoice["loan_invoice_id"]}<br/>'
+                            f'Название продукта: {loan_product["name"]}<br/>'
+                            f'Дата: {future_invoice["date"]}<br/>'
+                            f'Сумма платежа: {future_invoice["payment"]}<br/>'
+                            f'Сумма покрытия тела долга: {future_invoice["body_amount"]}<br/>'
+                            f'Сумма покрытия процентов начисленного долга: {future_invoice["payment"] - future_invoice["body_amount"]}<br/>')
 
         time_difference = future_invoice['date'] - loan['create_date']
         time_difference_months = time_difference.days / 30.44
-        privileges = 'Льготы:'
+        loan_privilege = 'Льготы: '
         if loan_type['grace_period_months'] is not None and time_difference_months < loan_type['grace_period_months']:
-            privileges += 'Льготный период. Дополнительные проценты и штрафы не начисляются.'
+            loan_privilege += 'Льготный период. Дополнительные проценты и штрафы не начисляются.'
             not_needed_sum_to_pay += future_invoice['payment']
+            loans_advice.append(
+                f'Советуем сэкономить в этом месяце на оплате платежа по продукту:<b> {loan_product["name"]}</b>.<br/>'
+                f'Размер экономии:<b> {future_invoice["payment"]} рублей.</b><br/> '
+                f'Для получения дополнительного дохода вложите средства в сберегательные продукты банка.<br/><br/>')
+
         else:
-            privileges += 'Нет'
-        options_for_loans += privileges + '\n\n'
+            loan_privilege += 'Нет'
+        loan_description += loan_privilege
+        loans_description.append(loan_description)
     necessary_sum_to_pay = total_needed_sum_to_pay - not_needed_sum_to_pay
-    options_to_pay = f'Общая сумма к оплате в этом месяце: {total_needed_sum_to_pay}\n' \
-                     f'Обязательная сумма к оплате в этом месяце: {necessary_sum_to_pay}\n' \
-                     f'Необязательная сумма к оплате в этом месяце: {not_needed_sum_to_pay}'
-    options_for_loans += '\n' + options_to_pay
-    return options_for_loans
+    loans_list = {
+        'loans_description': loans_description,
+        'loans_advice': loans_advice,
+        'necessary_sum_to_pay': necessary_sum_to_pay,
+        'total_needed_sum_to_pay': total_needed_sum_to_pay,
+        'not_needed_sum_to_pay': not_needed_sum_to_pay
+    }
+    return loans_list
 
 
 async def create_account_loans_charts(loan_invoices, report_id):
@@ -65,26 +76,56 @@ async def create_account_loans_charts(loan_invoices, report_id):
     past_payments = []
     for invoice_list in loan_invoices:
         for record in invoice_list:
-            data_payments.append((record['date'], record['payment']))
-            body_payments.append((record['date'], record['body_amount']))
-            if record['status'] == 'оплачен':
-                past_payments.append((record['date'], record['payment']))
-    data_payments.sort(key=lambda x: x[0])
-    body_payments.sort(key=lambda x: x[0])
-    dates = [date for date, _ in data_payments]
-    payments = [payment for _, payment in data_payments]
-    body_amounts = [body_amount for _, body_amount in body_payments]
-    past_dates = [date for date, _ in past_payments]
-    past_payments = [payment for _, payment in past_payments]
+            data_payments.append({'date': record['date'],
+                                  'payment': record['payment'],
+                                  'body_payment': record['body_amount'],
+                                  'status': record['status']})
+    data_payments.sort(key=lambda x: x['date'])
+    last_10_data_payments = data_payments[-10:]
+    last_10_payments = []
+    last_future_payments = []
+    for invoice in last_10_data_payments:
+        value = invoice['payment']
+        body_value = invoice['body_payment']
+        for each in last_10_payments:
+            if each['date'] == invoice['date']:
+                value += each['payment']
+                body_value += each['body_payment']
+        last_10_payments.append(
+            {
+                'date': invoice['date'],
+                'payment': value,
+                'body_payment': body_value
+            }
+        )
+        if invoice['status'] == 'будущий':
+            future_value = invoice['payment']
+            future_body_value = invoice['body_payment']
+            for each_future in last_future_payments:
+                if each_future['date'] == invoice['date']:
+                    future_value += each_future['payment']
+                    future_body_value += each_future['body_payment']
+            last_future_payments.append({
+                'date': invoice['date'],
+                'payment': future_value,
+                'body_payment': body_value
+            })
+    last_payments_payments = [item['payment'] for item in last_10_payments]
+    last_payments_dates = [item['date'] for item in last_10_payments]
+    last_payments_body_payments = [item['body_payment'] for item in last_10_payments]
+    future_payments_payments = [item['payment'] for item in last_future_payments]
+    future_payments_dates = [item['date'] for item in last_future_payments]
+    future_payments_body_payments = [item['body_payment'] for item in last_future_payments]
     plt.figure(figsize=(16, 10))
-    plt.bar(dates, payments, color='blue', label='Платеж')
-    plt.bar(dates, body_amounts, color='green', label='Сумма покрытия тела долга')
-    plt.bar(past_dates, past_payments, color='red', label='Прошлые платежи')
-
+    plt.bar(last_payments_dates, last_payments_payments, color='red', label='Общая сумма платежа')
+    plt.bar(last_payments_dates, last_payments_body_payments, color='orange', label='Общая сумма покрытия тела долга')
+    plt.bar(future_payments_dates, future_payments_payments, color='green', label='Общая сумма будущего платежа')
+    plt.bar(future_payments_dates, future_payments_body_payments, color='blue',
+            label='Общая сумма будущего покрытия тела долга')
     plt.xlabel('Дата', fontsize=16)
     plt.ylabel('Сумма платежа', fontsize=16)
     plt.title('Платежи по кредитам', fontsize=16)
-    plt.xticks(dates)
+    plt.xticks(last_payments_dates, rotation=45)
     plt.legend()
     plt.savefig('analysis/loan_chart.png')
     plt.close()

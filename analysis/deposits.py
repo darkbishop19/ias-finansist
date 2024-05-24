@@ -1,4 +1,7 @@
+import datetime
+
 import matplotlib
+from asyncpg import Record
 from matplotlib import pyplot as plt
 
 from database import bank_db, object_storage
@@ -11,10 +14,9 @@ async def get_account_deposit_dataset(account_id, report_id):
         deposit_invoices.append(await bank_db.get_deposit_invoices(deposit['deposit_id']))
 
     future_invoices = await get_future_deposit_invoices(deposit_invoices)
-    print(future_invoices)
-    options_text = await check_options_for_deposit_products(future_invoices)
-    await create_account_deposit_charts(deposit_invoices, report_id)
-    return options_text
+    deposit_list = await check_options_for_deposit_products(future_invoices)
+    await create_account_deposit_charts(deposit_invoices, future_invoices, report_id)
+    return deposit_list
 
 
 async def get_future_deposit_invoices(deposit_invoices):
@@ -24,55 +26,139 @@ async def get_future_deposit_invoices(deposit_invoices):
 
 
 async def check_options_for_deposit_products(future_deposit_invoice):
-    options_for_deposits = 'Количество ваших будущих доходов по сберегательной продукции:\n\n'
-    total_needed_sum_to_pay = 0
-    not_needed_sum_to_pay = 0
+    deposit_descriptions = ['Количество ваших будущих доходов по сберегательной продукции:']
+    total_income = 0
+
     for future_invoice in future_deposit_invoice:
+        total_income += future_invoice['payment']
         deposit = await bank_db.get_deposit_item(future_invoice['deposit_id'])
         deposit_product = await bank_db.get_deposit_product_item(deposit['deposit_product_id'])
         deposit_type = await bank_db.get_deposit_type_item(deposit_product['deposit_type_id'])
 
-        options_for_deposits += f'ID платежа: {future_invoice["deposit_invoice_id"]}\n' \
-                                f'Название продукта: {deposit_product["name"]}\n' \
-                                f'Дата: {future_invoice["date"]}\n' \
-                                f'Сумма начисления: {future_invoice["payment"]} рублей\n' \
-                                f'Сумма счета: {future_invoice["current_amount"]} рублей\n'
+        deposit_description = (f'ID платежа: {future_invoice["deposit_invoice_id"]}<br/>'
+                               f'Название продукта: {deposit_product["name"]}<br/>'
+                               f'Дата: {future_invoice["date"]}<br/>'
+                               f'Сумма начисления: {future_invoice["payment"]} рублей<br/>'
+                               f'Сумма счета на текущий момент: {future_invoice["current_amount"]} рублей<br/><br/>')
+        deposit_privileges = 'Льготы: '
+        if deposit_type['min_amount_for_bonus'] is not None and deposit['current_amount'] > deposit_type[
+            'min_amount_for_bonus']:
+            deposit_privileges += f'На вашем продукте {deposit["product_name"]} активирована бонусная процентная ставка: {deposit_type["bonus_rate"]}.' \
+                                  f'Для сохранение бонуса, баланс счета не должен упасть ниже: {deposit_type["min_amount_for_bonus"]}'
+        else:
+            deposit_privileges += 'Нет'
+        deposit_description += deposit_privileges
+        deposit_descriptions.append(deposit_description)
 
-        # time_difference = future_invoice['date'] - deposit['create_date']
-        # time_difference_months = time_difference.days / 30.44
-        privileges = 'Льготы:'
-        options_for_deposits += privileges + '\n\n'
-    necessary_sum_to_pay = total_needed_sum_to_pay - not_needed_sum_to_pay
-    options_to_pay = f'Общая сумма к оплате в этом месяце: {total_needed_sum_to_pay}\n' \
-                     f'Обязательная сумма к оплате в этом месяце: {necessary_sum_to_pay}\n' \
-                     f'Необязательная сумма к оплате в этом месяце: {not_needed_sum_to_pay}'
-    options_for_deposits += '\n' + options_to_pay
-    return options_for_deposits
+    deposit_list = {
+            'deposit_descriptions': deposit_descriptions,
+            'deposits_total_income': total_income,
+        }
+
+    return deposit_list
 
 
-async def create_account_deposit_charts(deposit_invoices, report_id):
+async def create_deposit_advice(account_id, necessary_sum_to_pay):
+    account_item = await bank_db.get_account_item(account_id)
+    available_balance = account_item['available_balance'] - necessary_sum_to_pay
+    if available_balance < 0:
+        available_balance = 0
+    user_deposits = await bank_db.get_account_deposits(account_id)
+    account_deposit_product_ids = [user_deposit['deposit_product_id'] for user_deposit in user_deposits]
+    max_user_rate = 0
+    user_best_product = Record
+    for product_id in account_deposit_product_ids:
+        deposit_product_item = await bank_db.get_deposit_product_item(product_id)
+        if deposit_product_item['rate'] > max_user_rate:
+            max_user_rate = deposit_product_item['rate']
+            user_best_product = deposit_product_item
+    changed = False
+    bonus_rate_needed = False
+    promising_product = Record
+    bank_deposit_products = await bank_db.get_all_bank_deposit_products()
+    for product in bank_deposit_products:
+        product_type = await bank_db.get_deposit_type_item(product['deposit_type_id'])
+        if product['rate'] > max_user_rate and product['limit_min'] < available_balance:
+            max_user_rate = product['rate']
+            changed = True
+        if product_type['bonus_rate'] is not None and product_type['bonus_rate'] > max_user_rate and \
+                product_type['min_amount_for_bonus'] <= available_balance and product['limit_min'] < available_balance:
+            max_user_rate = product['rate']
+            changed = True
+            bonus_rate_needed = True
+            promising_product = product
+    if bonus_rate_needed and changed:
+        product_type = await bank_db.get_deposit_type_item(promising_product['deposit_type_id'])
+        advice = f'Советуем открыть: {promising_product["name"]}.<br/>' \
+                 f'Сейчас в банке действует акция: при депозите в данный продукт ' \
+                 f'суммы от {product_type["min_amount_for_bonus"] // 1} рублей процентная ставка увеличивается до {product_type["bonus_rate"]*100} %.<br/>' \
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям акции.'
+    elif changed:
+        advice = f'Советуем открыть: {promising_product["name"]}.<br/>' \
+                 f'Процентная ставка {promising_product["rate"]*100} % по продукту принесет вам больше всего выгоды.<br/>' \
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям открытия продукта.'
+    elif available_balance > 0:
+        advice = f'Советуем вложить средства в открытый продукт: {user_best_product["name"]}<br/>' \
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}'
+    else:
+        advice = f'На текущий момент для вас выгоднее всего вложить средства в погашение платежей по кредитной продукции.<br/>' \
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}'
+    return advice
+
+
+async def create_account_deposit_charts(deposit_invoices, future_invoices, report_id):
     matplotlib.use('Agg')
     data_payments = []
-    past_payments = []
     for invoice_list in deposit_invoices:
         for record in invoice_list:
-            data_payments.append((record['date'], record['payment']))
-            if record['status'] == 'оплачен':
-                past_payments.append((record['date'], record['payment']))
-    data_payments.sort(key=lambda x: x[0])
-    dates = [date for date, _ in data_payments]
-    payments = [payment for _, payment in data_payments]
-    past_dates = [date for date, _ in past_payments]
-    past_payments = [payment for _, payment in past_payments]
-    plt.figure(figsize=(16, 10))
-    plt.plot(dates, payments, color='blue', label='Сумма дохода')
-    plt.plot(past_dates, past_payments, color='red', label='Прошлые платежи')
+            data_payments.append({
+                'date': record['date'],
+                'payment': record['payment'],
+                'status': record['status'],
+                'deposit_id': record['deposit_id']
+            })
+    data_payments.sort(key=lambda x: x['date'])
+    last_10_data_invoices = data_payments[-10:]
+    last_10_payments = []
+    last_future_payments = []
+    future_dates = []
+    for invoice in last_10_data_invoices:
+        value = invoice['payment']
 
+        for item in last_10_payments:
+            if item['date'] == invoice['date']:
+                value += item['payment']
+        last_10_payments.append({
+            'date': invoice['date'],
+            'payment': value
+        })
+
+    for future_invoice in last_10_data_invoices:
+        if future_invoice['status'] == 'будущий':
+            value = future_invoice['payment']
+
+            for item in last_future_payments:
+                if item['date'] == future_invoice['date']:
+                    value += item['payment']
+
+            last_future_payments.append({
+                'date': future_invoice['date'],
+                'payment': value
+            })
+
+    last_10_payments_dates = [item['date'] for item in last_10_payments]
+    last_10_payments_payments = [item['payment'] for item in last_10_payments]
+    last_future_payments_dates = [item['date'] for item in last_future_payments]
+    last_future_payments_payments = [item['payment'] for item in last_future_payments]
+    plt.figure(figsize=(16, 10))
+    plt.bar(last_10_payments_dates, last_10_payments_payments, color='red', label='Прошлый совокупный доход', width=1)
+    plt.bar(last_future_payments_dates, last_future_payments_payments, color='green', label='Будущий совокупный доход',
+            width=1)
     plt.xlabel('Дата', fontsize=16)
     plt.ylabel('Сумма платежа', fontsize=16)
     plt.title('Платежи по сберегательным продуктам', fontsize=16)
-    plt.xticks(dates)
+    plt.xticks(last_10_payments_dates, rotation=45)
     plt.legend()
     plt.savefig('analysis/deposit_chart.png')
     plt.close()
-    await object_storage.add_loan_chart(report_id)
+    await object_storage.add_deposit_chart(report_id)

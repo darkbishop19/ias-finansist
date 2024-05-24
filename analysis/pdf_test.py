@@ -17,7 +17,7 @@ text = (
 
 # Create a PDF document
 doc = SimpleDocTemplate(
-    "report.pdf",
+    "analysis/report.pdf",
     pagesize=A4,
     encoding='UTF-8',
     title='Отчет "Финансовая консультация клиента".'

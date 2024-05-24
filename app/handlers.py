@@ -33,8 +33,9 @@ async def cmd_start(message: types.Message, state: FSMContext):
     telegram_user_item = await server_db.get_telegram_user_item(session_item['telegram_user_id'])
     # report = await server_db.create_report(session_id)
     text = await reports.get_account_advices_data(telegram_user_item['account_id'], 1)
-    await message.answer(text=text, parse_mode='HTML')
-    await message.answer_photo(photo=FSInputFile('analysis/deposit_chart.png'))
+
+    # await message.answer(text=text, parse_mode='HTML')
+    # await message.answer_photo(photo=FSInputFile('analysis/deposit_chart.png'))
 
 
 @router.message(NextStep.password)
