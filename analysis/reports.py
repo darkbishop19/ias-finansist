@@ -1,10 +1,11 @@
+import datetime
 import io
 from collections import defaultdict
-from database import object_storage
+from database import object_storage, bank_db
 from reportlab.lib.utils import ImageReader
 
 from analysis import loans, deposits
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle, Image, Spacer
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle, Image, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
@@ -12,7 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from assets import adaptive_text, text_samples
 
 
-async def get_account_advices_data(account_id, report_id):
+async def create_account_financial_consulting_report(account_id, report_id):
     print('work')
     loans_list = await loans.get_account_loan_dataset(account_id, report_id)
     loans_pay_final = await adaptive_text.get_loans_final_pay(loans_list['total_needed_sum_to_pay'],
@@ -24,14 +25,13 @@ async def get_account_advices_data(account_id, report_id):
     await generate_pdf_report(loans_list['loans_advice'], loans_list['loans_description'], loans_pay_final,
                               deposit_list['deposit_descriptions'], deposits_total_income_text,
                               deposit_advice,
-                              report_id)
+                              report_id, account_id)
     print('done')
-    return ''
 
 
 async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
                               deposits_description, deposits_total_income, deposit_advice,
-                              report_id):
+                              report_id, account_id):
     pdfmetrics.registerFont(TTFont('TimesNewRoman', 'times.ttf'))
     doc = SimpleDocTemplate(
         "analysis/report.pdf",
@@ -50,15 +50,23 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
     styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=16,
                               spaceAfter=20, alignment=1, bold=1))
     title_text = 'Отчет "Финансовая консультация"'
+
     Story.append(Paragraph(title_text, styles['CustomTitle']))
+    account_item = await bank_db.get_account_item(account_id)
+    customer_item = await bank_db.get_customer_item(account_item['customer_id'])
+
+    report_text = f'Номер отчета: {report_id}<br/>' \
+                  f'Дата создания: {datetime.date.today()}<br/>' \
+                  f'Клиент: {customer_item["full_name"]}<br/>'
+    Story.append(Paragraph(report_text, styles['RussianNormal']))
     Story.append(Spacer(1, 12))
+    Story.append(Paragraph('Информация о кредитной продукции', styles['SectionTitle']))
 
     # Add text to the document
     for text in loans_description:
         Story.append(Paragraph(text, styles['RussianNormal']))
         Story.append(Spacer(1, 10))
     Story.append(Spacer(1, 10))
-    print(loans_pay_final)
     Story.append(Paragraph(loans_pay_final, styles['RussianNormal']))
     Story.append(Spacer(1, 10))
 
@@ -67,7 +75,8 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
     memory_file = io.BytesIO(image_bytes)
     Story.append(Image(memory_file, width=456, height=300))
     # Build the PDF
-    Story.append(Spacer(1, 10))
+    Story.append(PageBreak())
+    Story.append(Paragraph('Информация о сберегательной продукции', styles['SectionTitle']))
 
     for text in deposits_description:
         Story.append(Paragraph(text, styles['RussianNormal']))
@@ -78,14 +87,18 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
     Story.append(Spacer(1, 10))
 
     Story.append(Spacer(1, 10))
-    image_bytes = await object_storage.get_loan_chart(report_id)
+    image_bytes = await object_storage.get_deposit_chart(report_id)
     memory_file = io.BytesIO(image_bytes)
     Story.append(Image(memory_file, width=456, height=300))
-    Story.append(Spacer(1, 10))
+    Story.append(PageBreak())
+    Story.append(Paragraph('Финансовый совет', styles['SectionTitle']))
+
     for text in loans_advice:
         Story.append(Paragraph(text, styles['RussianNormal']))
-    Story.append(Spacer(1, 10))
-    Story.append(Paragraph(deposit_advice, styles['RussianNormal']))
+    Story.append(Spacer(1, 15))
+    for text in deposit_advice:
+        Story.append(Paragraph(text, styles['RussianNormal']))
+        Story.append(Spacer(1, 10))
 
     doc.build(Story)
     await object_storage.add_report(report_id)

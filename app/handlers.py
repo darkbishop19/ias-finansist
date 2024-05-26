@@ -2,8 +2,8 @@ from aiogram import types, F, Router, Bot
 from aiogram.filters import CommandStart, Command
 from app import markups
 from aiogram.fsm.context import FSMContext
-from database import server_db
-from aiogram.types import Message, FSInputFile
+from database import server_db, object_storage, bank_db
+from aiogram.types import Message, FSInputFile, BufferedInputFile
 from assets import adaptive_text, text_samples
 from app.fsm import NextStep, Session
 from app import functions
@@ -24,22 +24,23 @@ async def cmd_start(message: types.Message):
     await message.answer(text='Помощь', parse_mode='HTML')
 
 
-@router.message(F.text == text_samples.consulting)
+@router.message(F.text == text_samples.consulting, Session.session_id)
 async def cmd_start(message: types.Message, state: FSMContext):
-    # state_data = await state.get_data()
-    # session_id = state_data.get('session_id')
-    session_id = 19
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    await message.answer(text_samples.report_creation_started)
     session_item = await server_db.get_session_item(int(session_id))
     telegram_user_item = await server_db.get_telegram_user_item(session_item['telegram_user_id'])
-    # report = await server_db.create_report(session_id)
-    text = await reports.get_account_advices_data(telegram_user_item['account_id'], 1)
-
-    # await message.answer(text=text, parse_mode='HTML')
-    # await message.answer_photo(photo=FSInputFile('analysis/deposit_chart.png'))
+    report = await server_db.create_report(session_id)
+    await reports.create_account_financial_consulting_report(telegram_user_item['account_id'], report['report_id'])
+    pdf_report = await object_storage.get_report(report['report_id'])
+    await message.answer_document(document=BufferedInputFile(file=pdf_report,
+                                                             filename=f'Финансовая консультация {report["report_id"]}.pdf'))
 
 
 @router.message(NextStep.password)
 async def password_check(message: Message, state: FSMContext, bot_object: Bot):
+    print('works register')
     try:
         server_user_item = await server_db.check_password(message.text)
 

@@ -51,9 +51,9 @@ async def check_options_for_deposit_products(future_deposit_invoice):
         deposit_descriptions.append(deposit_description)
 
     deposit_list = {
-            'deposit_descriptions': deposit_descriptions,
-            'deposits_total_income': total_income,
-        }
+        'deposit_descriptions': deposit_descriptions,
+        'deposits_total_income': total_income,
+    }
 
     return deposit_list
 
@@ -64,6 +64,12 @@ async def create_deposit_advice(account_id, necessary_sum_to_pay):
     if available_balance < 0:
         available_balance = 0
     user_deposits = await bank_db.get_account_deposits(account_id)
+    existing_future_invoices_income = 0
+    for deposit in user_deposits:
+        deposit_invoices = await bank_db.get_deposit_invoices(deposit['deposit_id'])
+        for invoice in deposit_invoices:
+            if invoice['status'] == 'будущий':
+                existing_future_invoices_income += invoice['payment']
     account_deposit_product_ids = [user_deposit['deposit_product_id'] for user_deposit in user_deposits]
     max_user_rate = 0
     user_best_product = Record
@@ -89,20 +95,27 @@ async def create_deposit_advice(account_id, necessary_sum_to_pay):
             promising_product = product
     if bonus_rate_needed and changed:
         product_type = await bank_db.get_deposit_type_item(promising_product['deposit_type_id'])
-        advice = f'Советуем открыть: {promising_product["name"]}.<br/>' \
-                 f'Сейчас в банке действует акция: при депозите в данный продукт ' \
-                 f'суммы от {product_type["min_amount_for_bonus"] // 1} рублей процентная ставка увеличивается до {product_type["bonus_rate"]*100} %.<br/>' \
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям акции.'
+        advice = [(f'Советуем открыть: {promising_product["name"]}.<br/>'
+                   f'Сейчас в банке действует акция: при депозите в данный продукт '
+                   f'суммы от {product_type["min_amount_for_bonus"] // 1} рублей процентная ставка увеличивается до {product_type["bonus_rate"] * 100} %.<br/>'
+                   f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям акции.')]
+        advice.append(f'Ваш итоговый доход за месяц по рекомендации: {available_balance*product_type["bonus_rate"]/12 + existing_future_invoices_income} рублей<br/>'
+                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
     elif changed:
-        advice = f'Советуем открыть: {promising_product["name"]}.<br/>' \
-                 f'Процентная ставка {promising_product["rate"]*100} % по продукту принесет вам больше всего выгоды.<br/>' \
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям открытия продукта.'
+        advice = [f'Советуем открыть: {promising_product["name"]}.<br/>' 
+                 f'Процентная ставка {promising_product["rate"] * 100} % по продукту принесет вам больше всего выгоды.<br/>' 
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям открытия продукта.']
+        advice.append(f'Ваш итоговый доход за месяц: {available_balance*promising_product["rate"]/12 + existing_future_invoices_income} рублей<br/>'
+                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
     elif available_balance > 0:
-        advice = f'Советуем вложить средства в открытый продукт: {user_best_product["name"]}<br/>' \
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}'
+        advice = [f'Советуем вложить средства в открытый продукт: {user_best_product["name"]}<br/>' 
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
+        advice.append(f'Ваш итоговый доход за месяц: {available_balance*user_best_product["rate"]/12 + existing_future_invoices_income} рублей<br/>'
+                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
+
     else:
-        advice = f'На текущий момент для вас выгоднее всего вложить средства в погашение платежей по кредитной продукции.<br/>' \
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}'
+        advice = [f'На текущий момент для вас выгоднее всего вложить средства в погашение платежей по кредитной продукции.<br/>' 
+                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
     return advice
 
 
