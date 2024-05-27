@@ -23,6 +23,7 @@ async def check_password(password):
                      f"WHERE password = '{password}'")
         result = await conn.fetch(query_get)
         await conn.close()
+        db_server_pool.terminate()
         return result[-1]
 
 
@@ -33,7 +34,7 @@ async def update_user_info(password, telegram_id, language_code, username):
                         f"SET telegram_id = '{telegram_id}', language_code = '{language_code}', username = '{username}' "
                         f"WHERE password = '{password}';")
         await conn.execute(query_update)
-        print('bib')
+        db_server_pool.terminate()
         await conn.close()
 
 
@@ -53,6 +54,7 @@ async def create_session(telegram_user_id, moscow_time):
                      )
         result = await conn.fetch(query_get)
         await conn.close()
+        db_server_pool.terminate()
         return result[-1]['session_id']
 
 
@@ -61,9 +63,10 @@ async def get_session_item(session_id):
     async with db_server_pool.acquire() as conn:
         query_get = (f'SELECT * '
                      f'FROM sessions '
-                     f'WHERE session_id = {session_id}')
+                     f"WHERE session_id = {session_id} and status = 'активен'")
         result = await conn.fetch(query_get)
         await conn.close()
+        db_server_pool.terminate()
         return result[-1]
 
 
@@ -75,6 +78,7 @@ async def get_telegram_user_item(telegram_user_id):
                      f'WHERE telegram_user_id = {telegram_user_id}')
         result = await conn.fetch(query_get)
         await conn.close()
+        db_server_pool.terminate()
         return result[-1]
 
 
@@ -96,3 +100,27 @@ async def create_report(session_id):
         await conn.close()
         db_server_pool.terminate()
         return result[-1]
+
+
+async def get_user_session_items(telegram_user_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f'SELECT * '
+                     f'FROM sessions '
+                     f'WHERE telegram_user_id = {telegram_user_id}')
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result
+
+
+async def get_session_report_items(session_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f'SELECT * '
+                     f'FROM reports '
+                     f'WHERE session_id = {session_id}')
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result

@@ -1,4 +1,5 @@
 from app import functions
+from database import bank_db, server_db, object_storage
 
 
 async def hello_text(username):
@@ -26,4 +27,17 @@ async def get_loans_final_pay(total_needed_sum_to_pay, necessary_sum_to_pay, not
     text = (f'Общая сумма к оплате в этом месяце: {total_needed_sum_to_pay}<br/>'
             f'Обязательная сумма к оплате в этом месяце: {necessary_sum_to_pay}<br/>'
             f'Необязательная сумма к оплате в этом месяце: {not_needed_sum_to_pay}')
+    return text
+
+
+async def get_profile_info(telegram_user_id):
+    telegram_user_item = await server_db.get_telegram_user_item(telegram_user_id)
+    account_item = await bank_db.get_account_item(telegram_user_item['account_id'])
+    customer_item = await bank_db.get_customer_item(account_item['customer_id'])
+    text = f'Идентификатор: <code>{telegram_user_item["account_id"]}</code>\n' \
+           f'Telegram идентификатор: <code>{telegram_user_item["telegram_id"]}</code>\n' \
+           f'Telegram имя: <code>{telegram_user_item["username"]}</code>\n' \
+           f'ФИО: <code>{customer_item["full_name"]}</code>\n' \
+           f'E-mail: <code>{customer_item["mail"]}</code>\n' \
+           f'Дата рождения: <code>{customer_item["birth_date"]}</code>'
     return text

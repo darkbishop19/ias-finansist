@@ -2,6 +2,8 @@ import json
 import logging
 import time
 from aiogram import Bot, Dispatcher, types
+from aiogram.methods import DeleteWebhook
+
 from app.handlers import router
 from app.admin_handlers import admin_router
 
@@ -28,6 +30,7 @@ async def handler(event, context):
 
 
 async def main():
+    await bot(DeleteWebhook(drop_pending_updates=True))
     await dp.start_polling(bot)
 
 

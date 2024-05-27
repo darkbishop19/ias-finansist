@@ -3,11 +3,12 @@ from aiogram.filters import CommandStart, Command
 from app import markups
 from aiogram.fsm.context import FSMContext
 from database import server_db, object_storage, bank_db
-from aiogram.types import Message, FSInputFile, BufferedInputFile
+from aiogram.types import Message, FSInputFile, BufferedInputFile, CallbackQuery
 from assets import adaptive_text, text_samples
 from app.fsm import NextStep, Session
 from app import functions
 from analysis import reports
+from asyncpg import Record
 
 router = Router()
 
@@ -24,12 +25,18 @@ async def cmd_start(message: types.Message):
     await message.answer(text='Помощь', parse_mode='HTML')
 
 
-@router.message(F.text == text_samples.consulting, Session.session_id)
+@router.message(F.text == text_samples.consulting)
 async def cmd_start(message: types.Message, state: FSMContext):
     state_data = await state.get_data()
     session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+
     await message.answer(text_samples.report_creation_started)
-    session_item = await server_db.get_session_item(int(session_id))
+
     telegram_user_item = await server_db.get_telegram_user_item(session_item['telegram_user_id'])
     report = await server_db.create_report(session_id)
     await reports.create_account_financial_consulting_report(telegram_user_item['account_id'], report['report_id'])
@@ -38,9 +45,94 @@ async def cmd_start(message: types.Message, state: FSMContext):
                                                              filename=f'Финансовая консультация {report["report_id"]}.pdf'))
 
 
+@router.message(F.text == text_samples.profile)
+async def show_profile_info(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+    await message.answer(await adaptive_text.get_profile_info(session_item["telegram_user_id"]),
+                         parse_mode='HTML')
+
+
+@router.message(F.text == text_samples.support)
+async def show_support_info(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+    await message.answer(text_samples.support_description,
+                         parse_mode='HTML')
+
+
+@router.message(F.text == text_samples.reports)
+async def show_profile_info(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+    await message.answer(text_samples.your_reports,
+                         parse_mode='HTML',
+                         reply_markup=await markups.get_user_reports(session_item["telegram_user_id"]))
+
+
+@router.message(F.text == text_samples.sessions)
+async def show_user_sessions(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+    await message.answer(text_samples.your_sessions,
+                         reply_markup=await markups.get_user_sessions(session_item["telegram_user_id"]))
+
+
+@router.callback_query(F.data.startswith('showreport'))
+async def send_report_to_user(call: CallbackQuery, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await call.message.answer(text_samples.session_not_found)
+        return
+
+    operation, report_id = call.data.split('_')
+    pdf_report = await object_storage.get_report(int(report_id))
+    await call.message.reply_document(document=BufferedInputFile(file=pdf_report,
+                                                                 filename=f'Финансовая консультация {report_id}.pdf'))
+
+
+@router.callback_query(F.data.startswith('showsession'))
+async def send_report_to_user(call: CallbackQuery, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await call.message.answer(text_samples.session_not_found)
+        return
+    operation, search_session_id = call.data.split('_')
+    session_item = await server_db.get_session_item(int(search_session_id))
+    text = f'Идентификатор сессии: <code>{session_item["session_id"]}</code>\n' \
+           f'Дата создания: <code>{session_item["create_date"]}</code>\n' \
+           f'Статус: <code>{session_item["status"]}</code>'
+    await call.message.reply(text)
+
+
 @router.message(NextStep.password)
 async def password_check(message: Message, state: FSMContext, bot_object: Bot):
-    print('works register')
     try:
         server_user_item = await server_db.check_password(message.text)
 
@@ -53,8 +145,7 @@ async def password_check(message: Message, state: FSMContext, bot_object: Bot):
             await server_db.update_user_info(message.text, message.from_user.id, message.from_user.language_code,
                                              message.from_user.username)
 
-        await message.answer(text=text_samples.password_success, parse_mode='HTML',
-                             reply_markup=await markups.get_user_main_keyboard_markup())
+        await message.answer(text=text_samples.password_success, parse_mode='HTML')
         await state.clear()
         await create_session(message, state, server_user_item['telegram_user_id'])
     except:
@@ -67,6 +158,7 @@ async def create_session(message: Message, state: FSMContext, telegram_user_id: 
         session_id = await server_db.create_session(telegram_user_id, moscow_time)
         await state.set_state(Session.session_id)
         await state.update_data(session_id=session_id)
-        await message.answer(text=text_samples.session_create_success, parse_mode='HTML')
+        await message.answer(text=text_samples.session_create_success, parse_mode='HTML',
+                             reply_markup=await markups.get_user_main_keyboard_markup())
     except Exception as e:
         await message.answer(text=text_samples.session_create_error + '\n' + str(e), parse_mode='HTML')
