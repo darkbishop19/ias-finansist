@@ -177,8 +177,11 @@ async def create_session(message: Message, state: FSMContext, telegram_user_id: 
             markup = await markups.get_user_main_keyboard_markup()
         elif telegram_user_item['role'] == 'администратор':
             markup = await markups.get_admin_main_keyboard_markup()
-
+        elif telegram_user_item['role'] == 'консультант':
+            markup = await markups.get_consultant_keyboard_markup()
+        elif telegram_user_item['role'] == 'аналитик':
+            markup = await markups.get_analyst_keyboard_markup()
         await message.answer(text=text_samples.session_create_success, parse_mode='HTML',
                              reply_markup=markup)
-    except Exception as e:
-        await message.answer(text=text_samples.session_create_error + '\n' + str(e), parse_mode='HTML')
+    except:
+        await message.answer(text=text_samples.session_create_error, parse_mode='HTML')

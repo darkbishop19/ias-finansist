@@ -6,7 +6,8 @@ from aiogram.methods import DeleteWebhook
 
 from app.handlers import router
 from app.admin_handlers import admin_router
-
+from app.consultant_handlers import consultant_router
+from app.analyst_handlers import analyst_router
 from dotenv import load_dotenv
 import os
 import asyncio
@@ -16,6 +17,8 @@ load_dotenv()
 bot = Bot(token=os.getenv('BOT_TOKEN'))
 dp = Dispatcher()
 dp.include_routers(admin_router,
+                   consultant_router,
+                   analyst_router,
                    router)
 
 dp.update.middleware(BotObjectMiddleware(bot_object=bot))

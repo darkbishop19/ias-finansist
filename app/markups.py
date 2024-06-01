@@ -25,6 +25,18 @@ async def get_admin_main_keyboard_markup():
     return builder.as_markup(resize_keyboard=True)
 
 
+async def get_consultant_keyboard_markup():
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text=text_samples.get_report_for_client))
+
+    return builder.as_markup(resize_keyboard=True)
+
+async def get_analyst_keyboard_markup():
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text=text_samples.get_metrics))
+
+    return builder.as_markup(resize_keyboard=True)
+
 async def get_user_reports(telegram_user_id):
     builder = InlineKeyboardBuilder()
     user_reports = []

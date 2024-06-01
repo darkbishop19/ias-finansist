@@ -11,3 +11,8 @@ class Session(StatesGroup):
 
 class Admin(StatesGroup):
     telegram_user_id = State()
+    report_id = State()
+
+
+class Consultant(StatesGroup):
+    client_id = State()

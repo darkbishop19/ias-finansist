@@ -113,6 +113,17 @@ async def create_report(session_id):
         return result[-1]
 
 
+async def update_report_status(report_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_update = (f"UPDATE reports "
+                        f"SET status = 'завершен' "
+                        f"WHERE report_id = {report_id};")
+        await conn.execute(query_update)
+        await conn.close()
+        db_server_pool.terminate()
+
+
 async def get_user_session_items(telegram_user_id):
     db_server_pool = await create_pool()
     async with db_server_pool.acquire() as conn:
@@ -135,6 +146,40 @@ async def get_session_report_items(session_id):
         await conn.close()
         db_server_pool.terminate()
         return result
+
+
+async def get_sessions_count():
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f'SELECT count(*) '
+                     f'FROM sessions; ')
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result
+
+
+async def get_reports_count():
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f'SELECT count(*) '
+                     f'FROM reports; ')
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result
+
+
+async def get_users_count():
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f'SELECT count(*) '
+                     f'FROM telegram_users; ')
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result
+
 
 async def update_user_role(telegram_user_id, role):
     db_server_pool = await create_pool()

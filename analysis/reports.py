@@ -1,7 +1,7 @@
 import datetime
 import io
 from collections import defaultdict
-from database import object_storage, bank_db
+from database import object_storage, bank_db, server_db
 from reportlab.lib.utils import ImageReader
 
 from analysis import loans, deposits
@@ -26,6 +26,7 @@ async def create_account_financial_consulting_report(account_id, report_id):
                               deposit_list['deposit_descriptions'], deposits_total_income_text,
                               deposit_advice,
                               report_id, account_id)
+    await server_db.update_report_status(report_id)
     print('done')
 
 
