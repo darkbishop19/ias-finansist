@@ -42,8 +42,8 @@ async def create_session(telegram_user_id, moscow_time):
     db_server_pool = await create_pool()
     async with db_server_pool.acquire() as conn:
         query_post = (f"INSERT INTO sessions "
-                      f"(telegram_user_id, last_time_mes, create_date, status) "
-                      f"VALUES ({telegram_user_id}, '{moscow_time}', '{moscow_time}', 'активен');"
+                      f"(telegram_user_id, create_date, status) "
+                      f"VALUES ({telegram_user_id}, '{moscow_time}', 'активен');"
                       )
         await conn.execute(query_post)
         query_get = (f"SELECT * "
@@ -56,6 +56,17 @@ async def create_session(telegram_user_id, moscow_time):
         await conn.close()
         db_server_pool.terminate()
         return result[-1]['session_id']
+
+
+async def end_session(session_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_update = (f"UPDATE sessions "
+                        f"SET status = 'завершен' "
+                        f"WHERE session_id = {session_id};")
+        await conn.execute(query_update)
+        await conn.close()
+        db_server_pool.terminate()
 
 
 async def get_session_item(session_id):
@@ -124,3 +135,13 @@ async def get_session_report_items(session_id):
         await conn.close()
         db_server_pool.terminate()
         return result
+
+async def update_user_role(telegram_user_id, role):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_update = (f"UPDATE telegram_users "
+                        f"SET role = '{role}' "
+                        f"WHERE telegram_user_id = {telegram_user_id};")
+        await conn.execute(query_update)
+        await conn.close()
+        db_server_pool.terminate()

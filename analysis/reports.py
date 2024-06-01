@@ -21,7 +21,7 @@ async def create_account_financial_consulting_report(account_id, report_id):
                                                               loans_list['not_needed_sum_to_pay'])
     deposit_advice = await deposits.create_deposit_advice(account_id, loans_list['necessary_sum_to_pay'])
     deposit_list = await deposits.get_account_deposit_dataset(account_id, report_id)
-    deposits_total_income_text = f'Общая сумма дохода по вашим дебетовым продуктам: {deposit_list["deposits_total_income"]} рублей.'
+    deposits_total_income_text = f'Общая сумма дохода в этом месяце: {deposit_list["deposits_total_income"]} рублей.'
     await generate_pdf_report(loans_list['loans_advice'], loans_list['loans_description'], loans_pay_final,
                               deposit_list['deposit_descriptions'], deposits_total_income_text,
                               deposit_advice,
@@ -45,11 +45,11 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
     # Create styles
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='RussianNormal', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=12))
-    styles.add(ParagraphStyle(name='CustomTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=20,
+    styles.add(ParagraphStyle(name='CustomTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=18,
                               spaceAfter=20, alignment=1))
     styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=16,
                               spaceAfter=20, alignment=1, bold=1))
-    title_text = 'Отчет "Финансовая консультация"'
+    title_text = 'Отчет "Консультация банковских финансовых услуг"'
 
     Story.append(Paragraph(title_text, styles['CustomTitle']))
     account_item = await bank_db.get_account_item(account_id)

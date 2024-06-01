@@ -7,3 +7,7 @@ class NextStep(StatesGroup):
 
 class Session(StatesGroup):
     session_id = State()
+
+
+class Admin(StatesGroup):
+    telegram_user_id = State()
