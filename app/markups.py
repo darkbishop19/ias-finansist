@@ -17,6 +17,14 @@ async def get_user_main_keyboard_markup():
     return builder.as_markup(resize_keyboard=True)
 
 
+async def get_admin_main_keyboard_markup():
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text=text_samples.check_profile))
+    builder.row(KeyboardButton(text=text_samples.check_reports))
+
+    return builder.as_markup(resize_keyboard=True)
+
+
 async def get_user_reports(telegram_user_id):
     builder = InlineKeyboardBuilder()
     user_reports = []
@@ -38,7 +46,28 @@ async def get_user_sessions(telegram_user_id):
     builder = InlineKeyboardBuilder()
     session_items = await server_db.get_user_session_items(telegram_user_id)
     for session in session_items:
-        button_session = InlineKeyboardButton(text = f'📖 Сессия_{session["session_id"]}',
+        button_session = InlineKeyboardButton(text=f'📖 Сессия_{session["session_id"]}',
                                               callback_data=f'showsession_{session["session_id"]}')
         builder.row(button_session)
+    return builder.as_markup()
+
+
+async def change_role(telegram_user_id):
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text=text_samples.change_role,
+                                     callback_data=f'changerole_{telegram_user_id}'))
+    return builder.as_markup()
+
+
+async def choose_role(telegram_user_id):
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text='Клиент',
+                                     callback_data=f'makeclient_{telegram_user_id}'))
+    builder.row(InlineKeyboardButton(text='Аналитик',
+                                     callback_data=f'makeanalyst_{telegram_user_id}'))
+    builder.row(InlineKeyboardButton(text='Консультант',
+                                     callback_data=f'makeconsult_{telegram_user_id}'))
+    builder.row(InlineKeyboardButton(text='Администратор',
+                                     callback_data=f'makeadmin_{telegram_user_id}'))
+
     return builder.as_markup()

@@ -20,6 +20,20 @@ async def cmd_start(message: Message, state: FSMContext):
     await state.set_state(NextStep.password)
 
 
+@router.message(Command('end'))
+async def end_session(message: types.Message, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await message.answer(text_samples.session_not_found)
+        return
+    await server_db.end_session(session_id)
+    await state.clear()
+    await message.answer(text_samples.session_ends)
+
+
 @router.message(Command('help'))
 async def cmd_start(message: types.Message):
     await message.answer(text='Помощь', parse_mode='HTML')
@@ -154,11 +168,17 @@ async def password_check(message: Message, state: FSMContext, bot_object: Bot):
 
 async def create_session(message: Message, state: FSMContext, telegram_user_id: int):
     try:
+        telegram_user_item = await server_db.get_telegram_user_item(telegram_user_id)
         moscow_time = await functions.get_message_moscow_time(message.date)
         session_id = await server_db.create_session(telegram_user_id, moscow_time)
         await state.set_state(Session.session_id)
         await state.update_data(session_id=session_id)
+        if telegram_user_item['role'] == 'клиент':
+            markup = await markups.get_user_main_keyboard_markup()
+        elif telegram_user_item['role'] == 'администратор':
+            markup = await markups.get_admin_main_keyboard_markup()
+
         await message.answer(text=text_samples.session_create_success, parse_mode='HTML',
-                             reply_markup=await markups.get_user_main_keyboard_markup())
+                             reply_markup=markup)
     except Exception as e:
         await message.answer(text=text_samples.session_create_error + '\n' + str(e), parse_mode='HTML')

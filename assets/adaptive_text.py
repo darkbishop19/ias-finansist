@@ -39,5 +39,28 @@ async def get_profile_info(telegram_user_id):
            f'Telegram имя: <code>{telegram_user_item["username"]}</code>\n' \
            f'ФИО: <code>{customer_item["full_name"]}</code>\n' \
            f'E-mail: <code>{customer_item["mail"]}</code>\n' \
-           f'Дата рождения: <code>{customer_item["birth_date"]}</code>'
+           f'Дата рождения: <code>{customer_item["birth_date"]}</code>\n' \
+           f'Свободная сумма на балансе: <code>{account_item["available_balance"] // 1}</code> рублей'
+    return text
+
+
+async def get_all_users_info(telegram_user_id):
+    telegram_user_item = await server_db.get_telegram_user_item(telegram_user_id)
+    text = ''
+    if telegram_user_item['role'] == 'клиент':
+        account_item = await bank_db.get_account_item(telegram_user_item['account_id'])
+        customer_item = await bank_db.get_customer_item(account_item['customer_id'])
+        text = f'Идентификатор: <code>{telegram_user_item["account_id"]}</code>\n' \
+               f'Telegram идентификатор: <code>{telegram_user_item["telegram_id"]}</code>\n' \
+               f'Telegram имя: <code>{telegram_user_item["username"]}</code>\n' \
+               f'ФИО: <code>{customer_item["full_name"]}</code>\n' \
+               f'E-mail: <code>{customer_item["mail"]}</code>\n' \
+               f'Дата рождения: <code>{customer_item["birth_date"]}</code>\n' \
+               f'Свободная сумма на балансе: <code>{account_item["available_balance"] // 1}</code> рублей\n' \
+               f'Роль: <code>{telegram_user_item["role"]}</code>'
+    elif telegram_user_item['role'] == 'аналитик' or 'консультант':
+        text = f'Идентификатор: <code>{telegram_user_item["account_id"]}</code>\n' \
+               f'Telegram идентификатор: <code>{telegram_user_item["telegram_id"]}</code>\n' \
+               f'Telegram имя: <code>{telegram_user_item["username"]}</code>\n' \
+               f'Роль: <code>{telegram_user_item["role"]}</code>'
     return text

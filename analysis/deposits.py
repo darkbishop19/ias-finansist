@@ -39,7 +39,7 @@ async def check_options_for_deposit_products(future_deposit_invoice):
                                f'Название продукта: {deposit_product["name"]}<br/>'
                                f'Дата: {future_invoice["date"]}<br/>'
                                f'Сумма начисления: {future_invoice["payment"]} рублей<br/>'
-                               f'Сумма счета на текущий момент: {future_invoice["current_amount"]} рублей<br/><br/>')
+                               f'Сумма счета на текущий момент: {future_invoice["current_amount"]} рублей<br/>')
         deposit_privileges = 'Льготы: '
         if deposit_type['min_amount_for_bonus'] is not None and deposit['current_amount'] > deposit_type[
             'min_amount_for_bonus']:
