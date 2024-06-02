@@ -1,9 +1,6 @@
-import io
 import os
-
 import boto3
 from dotenv import load_dotenv
-from matplotlib import image as mpimg
 
 load_dotenv()
 telegram_s3 = boto3.resource(

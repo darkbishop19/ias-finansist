@@ -1,8 +1,6 @@
-import asyncio
 import os
 import asyncpg
 from dotenv import load_dotenv
-from aiogram.types import Message
 
 load_dotenv()
 

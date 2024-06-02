@@ -1,16 +1,13 @@
 import datetime
 import io
-from collections import defaultdict
 from database import object_storage, bank_db, server_db
-from reportlab.lib.utils import ImageReader
-
 from analysis import loans, deposits
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle, Image, Spacer, PageBreak
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Image, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from assets import adaptive_text, text_samples
+from assets import adaptive_text
 
 
 async def create_account_financial_consulting_report(account_id, report_id):

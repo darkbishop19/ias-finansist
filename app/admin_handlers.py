@@ -1,13 +1,10 @@
-import os
-
 from aiogram.fsm.context import FSMContext
-from database import server_db, bank_db, object_storage
-from app.fsm import NextStep, Admin
+from database import server_db, object_storage
+from app.fsm import Admin
 from assets import text_samples, adaptive_text
-from aiogram import types, F, Router
-from aiogram.filters import CommandStart, Command
+from aiogram import F, Router
 from dotenv import load_dotenv
-from aiogram.types import Message, FSInputFile, BufferedInputFile, CallbackQuery
+from aiogram.types import Message, BufferedInputFile, CallbackQuery
 from app import markups
 
 load_dotenv()

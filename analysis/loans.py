@@ -1,9 +1,6 @@
-import datetime
-
 from database import bank_db, object_storage
 import matplotlib.pyplot as plt
 import matplotlib
-from datetime import timedelta, datetime, date
 
 
 async def get_account_loan_dataset(account_id, report_id):

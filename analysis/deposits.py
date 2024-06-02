@@ -1,9 +1,6 @@
-import datetime
-
 import matplotlib
 from asyncpg import Record
 from matplotlib import pyplot as plt
-
 from database import bank_db, object_storage
 
 
@@ -99,23 +96,27 @@ async def create_deposit_advice(account_id, necessary_sum_to_pay):
                    f'Сейчас в банке действует акция: при депозите в данный продукт '
                    f'суммы от {product_type["min_amount_for_bonus"] // 1} рублей процентная ставка увеличивается до {product_type["bonus_rate"] * 100} %.<br/>'
                    f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям акции.')]
-        advice.append(f'Ваш итоговый доход за месяц по рекомендации: {available_balance*product_type["bonus_rate"]/12 + existing_future_invoices_income} рублей<br/>'
-                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
+        advice.append(
+            f'Ваш итоговый доход за месяц по рекомендации: {available_balance * product_type["bonus_rate"] / 12 + existing_future_invoices_income} рублей<br/>'
+            f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
     elif changed:
-        advice = [f'Советуем открыть: {promising_product["name"]}.<br/>' 
-                 f'Процентная ставка {promising_product["rate"] * 100} % по продукту принесет вам больше всего выгоды.<br/>' 
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям открытия продукта.']
-        advice.append(f'Ваш итоговый доход за месяц: {available_balance*promising_product["rate"]/12 + existing_future_invoices_income} рублей<br/>'
-                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
+        advice = [f'Советуем открыть: {promising_product["name"]}.<br/>'
+                  f'Процентная ставка {promising_product["rate"] * 100} % по продукту принесет вам больше всего выгоды.<br/>'
+                  f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance} рублей удовлетворяет условиям открытия продукта.']
+        advice.append(
+            f'Ваш итоговый доход за месяц: {available_balance * promising_product["rate"] / 12 + existing_future_invoices_income} рублей<br/>'
+            f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
     elif available_balance > 0:
-        advice = [f'Советуем вложить средства в открытый продукт: {user_best_product["name"]}<br/>' 
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
-        advice.append(f'Ваш итоговый доход за месяц: {available_balance*user_best_product["rate"]/12 + existing_future_invoices_income} рублей<br/>'
-                      f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
+        advice = [f'Советуем вложить средства в открытый продукт: {user_best_product["name"]}<br/>'
+                  f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
+        advice.append(
+            f'Ваш итоговый доход за месяц: {available_balance * user_best_product["rate"] / 12 + existing_future_invoices_income} рублей<br/>'
+            f'Ваш итоговый доход за месяц без рекомендации: {existing_future_invoices_income} рублей')
 
     else:
-        advice = [f'На текущий момент для вас выгоднее всего вложить средства в погашение платежей по кредитной продукции.<br/>' 
-                 f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
+        advice = [
+            f'На текущий момент для вас выгоднее всего вложить средства в погашение платежей по кредитной продукции.<br/>'
+            f'Ваш свободный баланс после уплаты расходов по кредитной продукции: {available_balance}']
     return advice
 
 
