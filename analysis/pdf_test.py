@@ -6,7 +6,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.units import inch
 
 # Register the font
-pdfmetrics.registerFont(TTFont('TimesNewRoman', 'Times New Roman.ttf'))
+pdfmetrics.registerFont(TTFont('bahn', 'bahnschrift.ttf'))
 
 # Create a sample text
 text = (

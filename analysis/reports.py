@@ -30,7 +30,7 @@ async def create_account_financial_consulting_report(account_id, report_id):
 async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
                               deposits_description, deposits_total_income, deposit_advice,
                               report_id, account_id):
-    pdfmetrics.registerFont(TTFont('TimesNewRoman', 'times.ttf'))
+    pdfmetrics.registerFont(TTFont('bahn', 'bahnschrift.ttf'))
     doc = SimpleDocTemplate(
         "analysis/report.pdf",
         pagesize=A4,
@@ -42,10 +42,10 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
 
     # Create styles
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='RussianNormal', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=12))
-    styles.add(ParagraphStyle(name='CustomTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=18,
+    styles.add(ParagraphStyle(name='RussianNormal', parent=styles['Normal'], fontName='bahn', fontSize=12))
+    styles.add(ParagraphStyle(name='CustomTitle', parent=styles['Normal'], fontName='bahn', fontSize=18,
                               spaceAfter=20, alignment=1))
-    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Normal'], fontName='TimesNewRoman', fontSize=16,
+    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Normal'], fontName='bahn', fontSize=16,
                               spaceAfter=20, alignment=1, bold=1))
     title_text = 'Отчет "Консультация банковских финансовых услуг"'
 
