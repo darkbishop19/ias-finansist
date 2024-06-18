@@ -69,7 +69,8 @@ async def show_profile_info(message: types.Message, state: FSMContext):
         await message.answer(text_samples.session_not_found)
         return
     await message.answer(await adaptive_text.get_profile_info(session_item["telegram_user_id"]),
-                         parse_mode='HTML')
+                         parse_mode='HTML',
+                         reply_markup=await markups.client_subs_to_notifications(session_item["telegram_user_id"]))
 
 
 @router.message(F.text == text_samples.support)
@@ -142,7 +143,7 @@ async def send_report_to_user(call: CallbackQuery, state: FSMContext):
     text = f'Идентификатор сессии: <code>{session_item["session_id"]}</code>\n' \
            f'Дата создания: <code>{session_item["create_date"]}</code>\n' \
            f'Статус: <code>{session_item["status"]}</code>'
-    await call.message.reply(text)
+    await call.message.reply(text, parse_mode='HTML')
 
 
 @router.message(NextStep.password)

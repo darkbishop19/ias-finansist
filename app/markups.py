@@ -31,11 +31,22 @@ async def get_consultant_keyboard_markup():
 
     return builder.as_markup(resize_keyboard=True)
 
+
 async def get_analyst_keyboard_markup():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text=text_samples.get_metrics))
 
     return builder.as_markup(resize_keyboard=True)
+
+
+async def client_subs_to_notifications(telegram_user_id):
+    builder = InlineKeyboardBuilder()
+
+    notification_sub = InlineKeyboardButton(text='🗞 Подписка на уведомления',
+                                            callback_data=f'notifsub_{telegram_user_id}')
+    builder.row(notification_sub)
+    return builder.as_markup()
+
 
 async def get_user_reports(telegram_user_id):
     builder = InlineKeyboardBuilder()
