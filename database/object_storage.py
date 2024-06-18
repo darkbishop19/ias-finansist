@@ -43,6 +43,7 @@ async def get_deposit_chart(report_id):
 async def add_report(report_id):
     bucket.upload_file("analysis/report.pdf", f"reports/report_{report_id}.pdf")
 
+
 async def get_report(report_id):
     object = bucket.Object(f'reports/report_{report_id}.pdf')
 
