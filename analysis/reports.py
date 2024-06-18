@@ -1,5 +1,7 @@
 import datetime
 import io
+import os
+
 from database import object_storage, bank_db, server_db
 from analysis import loans, deposits
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Image, Spacer, PageBreak
@@ -30,7 +32,10 @@ async def create_account_financial_consulting_report(account_id, report_id):
 async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
                               deposits_description, deposits_total_income, deposit_advice,
                               report_id, account_id):
-    pdfmetrics.registerFont(TTFont('bahn', 'bahnschrift.ttf'))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(script_dir, 'bahnschrift.ttf')
+
+    pdfmetrics.registerFont(TTFont('bahn', font_path))
     doc = SimpleDocTemplate(
         "analysis/report.pdf",
         pagesize=A4,
@@ -40,7 +45,6 @@ async def generate_pdf_report(loans_advice, loans_description, loans_pay_final,
 
     Story = []
 
-    # Create styles
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='RussianNormal', parent=styles['Normal'], fontName='bahn', fontSize=12))
     styles.add(ParagraphStyle(name='CustomTitle', parent=styles['Normal'], fontName='bahn', fontSize=18,
