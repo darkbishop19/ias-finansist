@@ -31,5 +31,5 @@ async def prepare_report(message: Message, state: FSMContext):
                                                                  filename=f'Финансовая консультация {report_item["report_id"]}.pdf'))
         await state.clear()
     except Exception as e:
-        await message.answer(text_samples.client_not_found + '\n\n' + str(e))
-
+        await message.answer(text_samples.client_not_found + '\nПопробуйте еще раз, нажав на кнопку.' + '\n\n' + str(e))
+    await state.clear()
