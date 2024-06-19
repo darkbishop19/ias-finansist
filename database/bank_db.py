@@ -165,3 +165,39 @@ async def get_customer_item(customer_id):
         await conn.close()
         db_server_pool.terminate()
         return result[-1]
+
+
+async def get_notification_item(account_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_get = (f"SELECT * FROM notifications "
+                     f"WHERE account_id = {account_id}")
+        result = await conn.fetch(query_get)
+        await conn.close()
+        db_server_pool.terminate()
+        return result[-1]
+
+
+async def update_notification_item(account_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_update = (f"UPDATE notifications "
+                        f"SET status = 'активен' "
+                        f"WHERE account_id = {account_id};")
+        result = await conn.fetch(query_update)
+        await conn.close()
+        db_server_pool.terminate()
+        return result[-1]
+
+
+async def create_notification_item(account_id):
+    db_server_pool = await create_pool()
+    async with db_server_pool.acquire() as conn:
+        query_create = (f"INSERT INTO notifications "
+                        f"(notification_id, account_id, status) "
+                        f"VALUES ({account_id}, {account_id},  'активен');"
+                        )
+        result = await conn.fetch(query_create)
+        await conn.close()
+        db_server_pool.terminate()
+        return

@@ -129,6 +129,30 @@ async def send_report_to_user(call: CallbackQuery, state: FSMContext):
                                                                  filename=f'Финансовая консультация {report_id}.pdf'))
 
 
+@router.callback_query(F.data.startswith('notifsub'))
+async def send_report_to_user(call: CallbackQuery, state: FSMContext):
+    state_data = await state.get_data()
+    session_id = state_data.get('session_id')
+    try:
+        session_item = await server_db.get_session_item(int(session_id))
+    except:
+        await call.message.answer(text_samples.session_not_found)
+        return
+    operation, telegram_user_id = call.data.split('_')
+    telegram_user_item = await server_db.get_telegram_user_item(int(telegram_user_id))
+    try:
+        notification_item = await bank_db.get_notification_item(telegram_user_item['account_id'])
+        if notification_item['status'] == 'активен':
+            message_text = f'{text_samples.already_notification_sub}'
+        else:
+            message_text = f'{text_samples.success_notification_sub}'
+            await bank_db.update_notification_item(telegram_user_item['account_id'])
+    except:
+        message_text = f'{text_samples.success_notification_sub}'
+        await bank_db.create_notification_item(telegram_user_item['account_id'])
+    await call.message.answer(message_text)
+
+
 @router.callback_query(F.data.startswith('showsession'))
 async def send_report_to_user(call: CallbackQuery, state: FSMContext):
     state_data = await state.get_data()
